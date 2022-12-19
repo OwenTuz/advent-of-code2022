@@ -48,3 +48,7 @@ int int_compare(const void *a, const void *b){
         return *si_a - *si_b;
     }
 }
+
+void aoc_string_slice(const gchar *in, gchar *out, size_t start, size_t end){
+   strncpy(out, in + start, end - start);
+}
