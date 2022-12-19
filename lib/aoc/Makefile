@@ -3,7 +3,7 @@ GLIB_CFLAGS=$(shell pkg-config --cflags --libs glib-2.0)
 CFLAGS=-g $(GLIB_CFLAGS)
 ARFLAGS=rcs
 
-$(OUTPUTFILE): aoc_utils.o
+$(OUTPUTFILE): aoc_utils.o aoc_queue.o
 	$(AR) $(ARFLAGS) $@ $?
 	ranlib $@
 
