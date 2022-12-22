@@ -15,7 +15,7 @@ bool is_touching(Point head, Point tail){
            (tail.x == head.x || tail.x == head.x - 1 || tail.x == head.x + 1);
 }
 
-void move_tail(const Point *head, Point *tail, GHashTable *visited){
+void move_tail(const Point *head, Point *tail){
     // don't adjust in the switch statement: this way, if there's any issue
     // we log the original value before adjustment
     int x_adjust = 0;
@@ -60,14 +60,14 @@ void move_tail(const Point *head, Point *tail, GHashTable *visited){
     tail->x += x_adjust;
     tail->y += y_adjust;
 
-    char *key = malloc(32); // slightly magic number
-    snprintf(key, 32, "%d,%d", tail->x, tail->y);
-    g_hash_table_add(visited, key);
 }
 
-void move(gchar *inst, Point *head, Point *tail, GHashTable *visited){
-    gchar *dir = strtok(inst, " ");
-    int steps = atoi(strtok(NULL, " "));
+void move(gchar *inst, Point *head, GArray *tail_nodes, GHashTable *visited){
+    char *save = NULL;
+
+    gchar *dir = strtok_r(inst, " ", &save);
+    int steps = atoi(strtok_r(NULL, " ", &save));
+
     if (steps == 0) {
         // this assumes the 0 is an error from atoi() and not an instruction
         // to move 0 steps
@@ -92,9 +92,19 @@ void move(gchar *inst, Point *head, Point *tail, GHashTable *visited){
                 printf("Error parsing move instruction %s, unknown direction %c\n", inst, dir[0]);
                 exit(1);
         }
-        if (! is_touching(*head, *tail)) {
-            move_tail(head, tail, visited);
-            assert(is_touching(*head, *tail));
+        Point *next_head = head;
+        for (guint i = 0; i < tail_nodes->len; ++i){
+            Point *tail = &g_array_index(tail_nodes, Point, i);
+            if (! is_touching(*next_head, *tail)) {
+                move_tail(next_head, tail);
+                assert(is_touching(*next_head, *tail));
+                if (i == tail_nodes-> len - 1) {
+                    char *key = malloc(32); // slightly magic number
+                    snprintf(key, 32, "%d,%d", tail->x, tail->y);
+                    g_hash_table_add(visited, key);
+                }
+            }
+            next_head = tail;
         }
     }
 }
@@ -110,9 +120,12 @@ void hashtable_count(gpointer key, gpointer value, gpointer user_data){
 }
 #pragma clang diagnostic pop
 
-int part1(GArray *input){
+int part1(const GArray *input){
     Point head = { 0, 0 };
     Point tail = { 0, 0 };
+
+    GArray *tails = g_array_new(TRUE, FALSE, sizeof(Point));
+    g_array_append_val(tails, tail);
 
     GHashTable *visited = g_hash_table_new_full(
         g_str_hash, g_str_equal, free, NULL
@@ -121,8 +134,38 @@ int part1(GArray *input){
 
     for (guint i = 0; i < input->len; ++i){
         gchar *line = g_array_index(input, gchar *, i);
-        move(line, &head, &tail, visited);
+        gchar *copied_line = strndup(line, strlen(line) + 1);
+        move(copied_line, &head, tails, visited);
+        free(copied_line);
     }
+    int count = 0;
+    g_array_free(tails, TRUE);
+    g_hash_table_foreach(visited, hashtable_count, &count);
+    g_hash_table_destroy(visited);
+    return count;
+}
+
+int part2(const GArray *input){
+    Point head = { 0, 0 };
+
+    GArray *tails = g_array_new(TRUE, FALSE, sizeof(Point));
+    for (guint i = 0; i < 9; ++i){
+        Point tail = { 0, 0 };
+        g_array_append_val(tails, tail);
+    }
+
+    GHashTable *visited = g_hash_table_new_full(
+        g_str_hash, g_str_equal, free, NULL
+    );
+    g_hash_table_add(visited, strndup("0,0", 4));
+
+    for (guint i = 0; i < input->len; ++i){
+        gchar *line = g_array_index(input, gchar *, i);
+        gchar *copied_line = strndup(line, strlen(line) + 1);
+        move(copied_line, &head, tails, visited);
+        free(copied_line);
+    }
+    g_array_free(tails, TRUE);
     int count = 0;
     g_hash_table_foreach(visited, hashtable_count, &count);
     g_hash_table_destroy(visited);
@@ -142,6 +185,7 @@ int main(int argc, char **argv) {
     if (!input) exit(1);
 
     printf("Part 1: Answer is %d\n", part1(input));
+    printf("Part 2: Answer is %d\n", part2(input));
     g_array_free(input, TRUE);
     return 0;
 }
