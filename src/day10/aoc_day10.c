@@ -78,6 +78,29 @@ int part1(GArray *input){
            (220 * tick_gen(input, 220, FALSE));
 }
 
+void part2(GArray *input){
+    char *grid[6] = {
+        strndup("                                        ", 41),
+        strndup("                                        ", 41),
+        strndup("                                        ", 41),
+        strndup("                                        ", 41),
+        strndup("                                        ", 41),
+        strndup("                                        ", 41),
+    };
+    for (int vpos = 0; vpos < 6; ++vpos){
+        for (int hpos = 0; hpos < 40; ++hpos){
+            bool clean_start = (vpos == 0 && hpos == 0);
+            int current_pixel = tick_gen(input, (vpos * 40) + hpos + 1, clean_start);
+            if (hpos - 1 <= current_pixel && current_pixel <= hpos + 1){
+                grid[vpos][hpos] = '#';
+            }
+        }
+        printf("%s\n", grid[vpos]);
+        free(grid[vpos]);
+    }
+    return;
+}
+
 int main(int argc, char **argv) {
     char *filename;
     if (argc > 1) {
@@ -91,6 +114,8 @@ int main(int argc, char **argv) {
     if (!input) exit(1);
 
     printf("Part 1: Answer is %d\n", part1(input));
+    printf("Part 2:\n");
+    part2(input);
     g_array_free(input, TRUE);
     return 0;
 }
